@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "../Config.h"
-#include "../queue/Queue.h"
+#include "../queue/SyncQueue.h"
 
 class Platform {
 

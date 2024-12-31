@@ -280,76 +280,70 @@ ISR(TIMER1_COMPA_vect) {
 	intr_iteration += 1;
 	switch (intr_iteration) {
 	case 0:
-	case 1:
-	case 2:
-	case 3:
-#if MOTOR_COUNT >= 5
-	case 4:
-#endif
 	{
-		Queue::next(intr_iteration);
-	} break;
-	case 5: {
-		Queue::next();
-	} break;
-
-	case 6: {
         // ~17 cycles == 1105ns
-        intr_buffer[0] = Queue::next_data[0];
+		uint16_t vel = SyncQueue::isr_next(intr_iteration);
+		intr_buffer[0] = vel;
 		// no need to reset this, because the counter always ends up with the same value it started
-        //intr_buffer[1] = 127; 
-        if (Queue::next_data[1]) {
+		if (vel >> 8) {
             MOTOR0_DIR_PORT &= ~MOTOR0_DIR_PIN;
         } else {
             MOTOR0_DIR_PORT |= MOTOR0_DIR_PIN;
         }
 	} break;
-	case 7: {
+	case 1:
+	{
         // ~17 cycles == 1105ns
-        intr_buffer[2] = Queue::next_data[2];
+		uint16_t vel = SyncQueue::isr_next(intr_iteration);
+		intr_buffer[2] = vel;
 		// no need to reset this, because the counter always ends up with the same value it started
-        //intr_buffer[1] = 127; 
-        if (Queue::next_data[3]) {
+		if (vel >> 8) {
             MOTOR1_DIR_PORT &= ~MOTOR1_DIR_PIN;
         } else {
             MOTOR1_DIR_PORT |= MOTOR1_DIR_PIN;
         }
 	} break;
-	case 8: {
+	case 2:
+	{
         // ~17 cycles == 1105ns
-        intr_buffer[4] = Queue::next_data[4];
+		uint16_t vel = SyncQueue::isr_next(intr_iteration);
+		intr_buffer[4] = vel;
 		// no need to reset this, because the counter always ends up with the same value it started
-        //intr_buffer[1] = 127; 
-        if (Queue::next_data[5]) {
+		if (vel >> 8) {
             MOTOR2_DIR_PORT &= ~MOTOR2_DIR_PIN;
         } else {
             MOTOR2_DIR_PORT |= MOTOR2_DIR_PIN;
         }
 	} break;
-	case 9: {
+	case 3:
+	{
         // ~17 cycles == 1105ns
-        intr_buffer[6] = Queue::next_data[6];
+		uint16_t vel = SyncQueue::isr_next(intr_iteration);
+		intr_buffer[6] = vel;
 		// no need to reset this, because the counter always ends up with the same value it started
-        //intr_buffer[1] = 127; 
-        if (Queue::next_data[7]) {
+		if (vel >> 8) {
             MOTOR3_DIR_PORT &= ~MOTOR3_DIR_PIN;
         } else {
             MOTOR3_DIR_PORT |= MOTOR3_DIR_PIN;
         }
 	} break;
 #if MOTOR_COUNT >= 5
-	case 10: {
+	case 4:
+	{
         // ~17 cycles == 1105ns
-        intr_buffer[8] = Queue::next_data[8];
+		uint16_t vel = SyncQueue::isr_next(intr_iteration);
+		intr_buffer[8] = vel;
 		// no need to reset this, because the counter always ends up with the same value it started
-        //intr_buffer[1] = 127; 
-        if (Queue::next_data[9]) {
+		if (vel >> 8) {
             MOTOR4_DIR_PORT &= ~MOTOR4_DIR_PIN;
         } else {
             MOTOR4_DIR_PORT |= MOTOR4_DIR_PIN;
         }
 	} break;
 #endif
+	case 5: {
+		SyncQueue::isr_next();
+	} break;
 
 	/*case 11: {
 		uint8_t end = (GET_PIN(MOTOR0_MIN_PORT) & MOTOR0_MIN_PIN) == 0;
@@ -428,7 +422,7 @@ ISR(TIMER1_COMPB_vect) {
 		if (end_detection[m<<1] != end_detection[(m<<1) + 1]) {
 			end_detection[(m<<1) + 1] = end_detection[m<<1];
 			blocked[m] = 1;
-			Queue::reset(m);
+			SyncQueue::reset(m);
 		}
 	}
 }

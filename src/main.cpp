@@ -20,16 +20,19 @@ int32_t pos[] = { 0, 0, 0, 0 };
 void loop() {
     uint8_t c = read();
     if (c == 64) {
+        uint16_t vel[8];
         for (uint8_t m = 0; m < StepperMotors::motor_count(); m++) {
             uint8_t direction = read();
             uint8_t value = read();
+            vel[m*2+0] = value;
+            vel[m*2+1] = direction;
             if (direction == 0) {
                 pos[m] -= value;
             } else {
                 pos[m] += value;
             }
-            StepperMotors::move(m, direction, value);
         }
+        StepperMotors::move(vel);
     } else if (c == 100) {
         StepperMotors::turn_on();
         pos[0] = 0;

@@ -15,29 +15,18 @@ public:
 
 	static uint8_t widx;
 	static uint8_t ridx;
-	static uint8_t data[256*MOTOR_COUNT*2];
-	static uint8_t next_data[MOTOR_COUNT*2];
+	static uint16_t data[256*MOTOR_COUNT];
 	static uint8_t end_detection[MOTOR_COUNT];
-
-	static bool idle();
-
-	static bool idle(uint8_t m);
-
-	static bool idle_bits(uint8_t m);
 
 	static bool full();
 
 	static uint8_t free();
 
-	static uint8_t get_widx();
+	static void enq(uint16_t *vel);
 
-	static uint8_t get_ridx();
+	static void isr_next();
 
-	static void enq(uint8_t *dir_vel);
-
-	static void next();
-
-	static void next(uint8_t m);
+	static uint16_t isr_next(uint8_t m);
 
 	static void reset();
 

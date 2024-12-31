@@ -10,10 +10,9 @@ public:
 
     static uint8_t motor_count();
 
-    static bool idle();
-    static uint8_t free();
+    static bool free();
 
-    static void move(uint8_t motor, uint8_t direction, uint8_t value);
+    static void move(uint16_t *vel);
 
     static bool is_at_end(uint8_t motor);
     static bool is_blocked(uint8_t motor);

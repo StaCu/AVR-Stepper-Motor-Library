@@ -1,6 +1,6 @@
 #include "StepperMotors.h"
 
-#include "queue/Queue.h"
+#include "queue/SyncQueue.h"
 #include "platform/Platform.h"
 
 // # ================================================================ #
@@ -8,7 +8,7 @@
 // # ================================================================ #
 
 void StepperMotors::init() {
-	Queue::reset();
+	SyncQueue::reset();
 	Platform::init();
 	Platform::start();
 }
@@ -21,16 +21,12 @@ uint8_t StepperMotors::motor_count() {
 	return MOTOR_COUNT;
 }
 
-bool StepperMotors::idle() {
-	return Queue::idle();
+bool StepperMotors::free() {
+	return SyncQueue::free();
 }
 
-uint8_t StepperMotors::free() {
-	return Queue::free(0);
-}
-
-void StepperMotors::move(uint8_t motor, uint8_t direction, uint8_t value) {
-	Queue::enq(motor, direction, value);
+void StepperMotors::move(uint16_t *vel) {
+	SyncQueue::enq(vel);
 }
 
 bool StepperMotors::is_at_end(uint8_t motor) {
@@ -67,9 +63,9 @@ void StepperMotors::turn_off(uint8_t motor) {
 
 void StepperMotors::stop() {
 	auto intr = Platform::InterruptProtectionFrame();
-	Queue::reset();
+	SyncQueue::reset();
 }
 
 void StepperMotors::stop(uint8_t motor) {
-	Queue::reset(motor);
+	SyncQueue::reset(motor);
 }

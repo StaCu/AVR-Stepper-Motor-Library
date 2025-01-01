@@ -78,7 +78,6 @@ uint8_t intr_buffer[MOTOR_COUNT*2];
 uint8_t end_detection[MOTOR_COUNT*2];
 uint8_t blocked[MOTOR_COUNT];
 uint8_t intr_iteration;
-uint8_t intr_timing;
 
 void Platform::init() {
 	Platform::stop();
@@ -150,7 +149,9 @@ void Platform::init() {
 	TCCR1B |= (1<<WGM12);  // Clear Timer on Compare Match
 
 	// compare value
-	OCR1A = 50; // the correct value is set inside the isr
+	// we want this ISR to fire 256 times per 4ms period.
+	// 1÷16000000×256×250 == 0.004
+	OCR1A = 250;
 	OCR1B = 60;
 }
 
@@ -204,7 +205,6 @@ void Platform::start() {
 	}
 
     intr_iteration = 0;
-	intr_timing = 0;
 	
 	// enable output compare A interrupt
 	TIMSK1 |= (1<<OCIE1A);
@@ -232,119 +232,141 @@ void Platform::disableInterrupts() {
 }
 
 ISR(TIMER1_COMPA_vect) {
-    // drive motor[0]
-    // ~17 cycles == 1105ns
-    uint8_t vel = intr_buffer[0];
-	uint8_t cnt = intr_buffer[1];
-	uint8_t next_cnt = cnt + vel;
-	if (next_cnt < cnt) {
-		MOTOR0_CLK_PORT |= MOTOR0_CLK_PIN;
-	}
-	intr_buffer[1] = next_cnt;
+	if (intr_iteration == 0) {
+		intr_iteration = 1;
+		if (SyncQueue::widx == SyncQueue::ridx) {
+			// queue is empty
+			intr_buffer[0] = 0;
+			intr_buffer[2] = 0;
+			intr_buffer[4] = 0;
+			intr_buffer[6] = 0;
+			// increment the motors write index, so it doesn't fall behind
+			SyncQueue::ridx += 1;
+			SyncQueue::widx = SyncQueue::ridx;
+		} else {
+			// queue is not empty
+			uint16_t ridx = SyncQueue::ridx*MOTOR_COUNT*2;
+			uint8_t *data = &SyncQueue::data[ridx];
 
-    // drive motor[1]
-    // ~15 cycles == 975ns
-    vel = intr_buffer[2];
-	cnt = intr_buffer[3];
-	next_cnt = cnt + vel;
-	if (next_cnt < cnt) {
-		MOTOR1_CLK_PORT |= MOTOR1_CLK_PIN;
-	}
-	intr_buffer[3] = next_cnt;
+			intr_buffer[0] = data[0];
+        	intr_buffer[1] = 255;
+			if (data[1] == 0) {
+				MOTOR0_DIR_PORT &= ~MOTOR0_DIR_PIN;
+			} else {
+				MOTOR0_DIR_PORT |= MOTOR0_DIR_PIN;
+			}
 
-    vel = intr_buffer[4];
-	cnt = intr_buffer[5];
-	next_cnt = cnt + vel;
-	if (next_cnt < cnt) {
-		MOTOR2_CLK_PORT |= MOTOR2_CLK_PIN;
-	}
-	intr_buffer[5] = next_cnt;
+			intr_buffer[2] = data[2];
+        	intr_buffer[3] = 255;
+			if (data[3] == 0) {
+				MOTOR1_DIR_PORT &= ~MOTOR1_DIR_PIN;
+			} else {
+				MOTOR1_DIR_PORT |= MOTOR1_DIR_PIN;
+			}
 
-    vel = intr_buffer[6];
-	cnt = intr_buffer[7];
-	next_cnt = cnt + vel;
-	if (next_cnt < cnt) {
-		MOTOR3_CLK_PORT |= MOTOR3_CLK_PIN;
-	}
-	intr_buffer[7] = next_cnt;
-#if MOTOR_COUNT >= 5
-    vel = intr_buffer[8];
-	cnt = intr_buffer[9];
-	next_cnt = cnt + vel;
-	if (next_cnt < cnt) {
-		MOTOR4_CLK_PORT |= MOTOR4_CLK_PIN;
-	}
-	intr_buffer[9] = next_cnt;
-#endif
+			intr_buffer[4] = data[4];
+        	intr_buffer[5] = 255;
+			if (data[5] == 0) {
+				MOTOR2_DIR_PORT &= ~MOTOR2_DIR_PIN;
+			} else {
+				MOTOR2_DIR_PORT |= MOTOR2_DIR_PIN;
+			}
 
-	intr_iteration += 1;
+			intr_buffer[6] = data[6];
+        	intr_buffer[7] = 255;
+			if (data[7] == 0) {
+				MOTOR3_DIR_PORT &= ~MOTOR3_DIR_PIN;
+			} else {
+				MOTOR3_DIR_PORT |= MOTOR3_DIR_PIN;
+			}
+
+			SyncQueue::ridx += 1;
+		}
+	} else {
+		// drive motor[0]
+		// ~17 cycles == 1105ns
+		uint8_t vel = intr_buffer[0];
+		uint8_t cnt = intr_buffer[1];
+		uint8_t next_cnt = cnt + vel;
+		if (next_cnt < cnt) {
+			MOTOR0_CLK_PORT |= MOTOR0_CLK_PIN;
+		}
+		intr_buffer[1] = next_cnt;
+
+		// drive motor[1]
+		// ~15 cycles == 975ns
+		vel = intr_buffer[2];
+		cnt = intr_buffer[3];
+		next_cnt = cnt + vel;
+		if (next_cnt < cnt) {
+			MOTOR1_CLK_PORT |= MOTOR1_CLK_PIN;
+		}
+		intr_buffer[3] = next_cnt;
+
+		vel = intr_buffer[4];
+		cnt = intr_buffer[5];
+		next_cnt = cnt + vel;
+		if (next_cnt < cnt) {
+			MOTOR2_CLK_PORT |= MOTOR2_CLK_PIN;
+		}
+		intr_buffer[5] = next_cnt;
+
+		vel = intr_buffer[6];
+		cnt = intr_buffer[7];
+		next_cnt = cnt + vel;
+		if (next_cnt < cnt) {
+			MOTOR3_CLK_PORT |= MOTOR3_CLK_PIN;
+		}
+		intr_buffer[7] = next_cnt;
+	#if MOTOR_COUNT >= 5
+		vel = intr_buffer[8];
+		cnt = intr_buffer[9];
+		next_cnt = cnt + vel;
+		if (next_cnt < cnt) {
+			MOTOR4_CLK_PORT |= MOTOR4_CLK_PIN;
+		}
+		intr_buffer[9] = next_cnt;
+	#endif
+
+		intr_iteration += 1;
+
+		asm volatile (
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			"nop\n"
+			: : :
+		);
+
+		// clear the step pin
+		// ~8 cycles == 520ns
+		MOTOR0_CLK_PORT &= ~MOTOR0_CLK_PIN;
+		MOTOR1_CLK_PORT &= ~MOTOR1_CLK_PIN;
+		MOTOR2_CLK_PORT &= ~MOTOR2_CLK_PIN;
+		MOTOR3_CLK_PORT &= ~MOTOR3_CLK_PIN;
+	#if MOTOR_COUNT >= 5
+		MOTOR4_CLK_PORT &= ~MOTOR4_CLK_PIN;
+	#endif
+	}
+
+/*
 	switch (intr_iteration) {
-	case 0:
-	{
-        // ~17 cycles == 1105ns
-		uint16_t vel = SyncQueue::isr_next(intr_iteration);
-		intr_buffer[0] = vel;
-		// no need to reset this, because the counter always ends up with the same value it started
-		if (vel >> 8) {
-            MOTOR0_DIR_PORT &= ~MOTOR0_DIR_PIN;
-        } else {
-            MOTOR0_DIR_PORT |= MOTOR0_DIR_PIN;
-        }
-	} break;
-	case 1:
-	{
-        // ~17 cycles == 1105ns
-		uint16_t vel = SyncQueue::isr_next(intr_iteration);
-		intr_buffer[2] = vel;
-		// no need to reset this, because the counter always ends up with the same value it started
-		if (vel >> 8) {
-            MOTOR1_DIR_PORT &= ~MOTOR1_DIR_PIN;
-        } else {
-            MOTOR1_DIR_PORT |= MOTOR1_DIR_PIN;
-        }
-	} break;
-	case 2:
-	{
-        // ~17 cycles == 1105ns
-		uint16_t vel = SyncQueue::isr_next(intr_iteration);
-		intr_buffer[4] = vel;
-		// no need to reset this, because the counter always ends up with the same value it started
-		if (vel >> 8) {
-            MOTOR2_DIR_PORT &= ~MOTOR2_DIR_PIN;
-        } else {
-            MOTOR2_DIR_PORT |= MOTOR2_DIR_PIN;
-        }
-	} break;
-	case 3:
-	{
-        // ~17 cycles == 1105ns
-		uint16_t vel = SyncQueue::isr_next(intr_iteration);
-		intr_buffer[6] = vel;
-		// no need to reset this, because the counter always ends up with the same value it started
-		if (vel >> 8) {
-            MOTOR3_DIR_PORT &= ~MOTOR3_DIR_PIN;
-        } else {
-            MOTOR3_DIR_PORT |= MOTOR3_DIR_PIN;
-        }
-	} break;
-#if MOTOR_COUNT >= 5
-	case 4:
-	{
-        // ~17 cycles == 1105ns
-		uint16_t vel = SyncQueue::isr_next(intr_iteration);
-		intr_buffer[8] = vel;
-		// no need to reset this, because the counter always ends up with the same value it started
-		if (vel >> 8) {
-            MOTOR4_DIR_PORT &= ~MOTOR4_DIR_PIN;
-        } else {
-            MOTOR4_DIR_PORT |= MOTOR4_DIR_PIN;
-        }
-	} break;
-#endif
-	case 5: {
-		SyncQueue::isr_next();
-	} break;
-
 	/*case 11: {
 		uint8_t end = (GET_PIN(MOTOR0_MIN_PORT) & MOTOR0_MIN_PIN) == 0;
 		if (end != end_detection[0]) {
@@ -372,7 +394,7 @@ ISR(TIMER1_COMPA_vect) {
 			end_detection[6] = end;
 			intr_buffer[6] = 0;
 		}
-	} break;*/
+	} break;*//*
 #if MOTOR_COUNT >= 5
 	case 15: {
 		uint8_t end = (GET_PIN(MOTOR4_MIN_PORT) & MOTOR4_MIN_PIN) != 0;
@@ -389,30 +411,8 @@ ISR(TIMER1_COMPA_vect) {
 
 	default: break;
 	}
-	
-	// we want this ISR to fire 255 times per 4ms period.
-	// 1÷16000000×255×250 == 0.003984375 (too small)
-	// 1÷16000000×255×251 == 0.004000313 (too large)
-	// => combine both:
-	// 1÷16000000×255×(251×50+250)÷51 = 0.004
-	// => subtract one because OCR1AL is a zero based counter
-	if (intr_timing == 0) {
-		OCR1AL = 249;
-		intr_timing = 50;
-	} else {
-		OCR1AL = 250;
-		intr_timing -= 1;
-	}
+*/
 
-    // clear the step pin
-    // ~8 cycles == 520ns
-    MOTOR0_CLK_PORT &= ~MOTOR0_CLK_PIN;
-    MOTOR1_CLK_PORT &= ~MOTOR1_CLK_PIN;
-    MOTOR2_CLK_PORT &= ~MOTOR2_CLK_PIN;
-    MOTOR3_CLK_PORT &= ~MOTOR3_CLK_PIN;
-#if MOTOR_COUNT >= 5
-    MOTOR4_CLK_PORT &= ~MOTOR4_CLK_PIN;
-#endif
 }
 
 ISR(TIMER1_COMPB_vect) {
@@ -421,8 +421,8 @@ ISR(TIMER1_COMPB_vect) {
 	for (int m = 0; m < MOTOR_COUNT; m++) {
 		if (end_detection[m<<1] != end_detection[(m<<1) + 1]) {
 			end_detection[(m<<1) + 1] = end_detection[m<<1];
-			blocked[m] = 1;
-			SyncQueue::reset(m);
+			//blocked[m] = 1;
+			//SyncQueue::reset(m);
 		}
 	}
 }

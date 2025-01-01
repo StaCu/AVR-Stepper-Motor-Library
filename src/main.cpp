@@ -20,7 +20,7 @@ int32_t pos[] = { 0, 0, 0, 0 };
 void loop() {
     uint8_t c = read();
     if (c == 64) {
-        uint16_t vel[8];
+        uint8_t vel[16];
         for (uint8_t m = 0; m < StepperMotors::motor_count(); m++) {
             uint8_t direction = read();
             uint8_t value = read();

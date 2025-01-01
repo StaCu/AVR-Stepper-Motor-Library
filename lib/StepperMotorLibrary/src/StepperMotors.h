@@ -10,9 +10,9 @@ public:
 
     static uint8_t motor_count();
 
-    static bool free();
+    static uint8_t free();
 
-    static void move(uint16_t *vel);
+    static void move(uint8_t *vel_dir);
 
     static bool is_at_end(uint8_t motor);
     static bool is_blocked(uint8_t motor);

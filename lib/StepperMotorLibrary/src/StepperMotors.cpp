@@ -21,12 +21,12 @@ uint8_t StepperMotors::motor_count() {
 	return MOTOR_COUNT;
 }
 
-bool StepperMotors::free() {
+uint8_t StepperMotors::free() {
 	return SyncQueue::free();
 }
 
-void StepperMotors::move(uint16_t *vel) {
-	SyncQueue::enq(vel);
+void StepperMotors::move(uint8_t *vel_dir) {
+	SyncQueue::enq(vel_dir);
 }
 
 bool StepperMotors::is_at_end(uint8_t motor) {

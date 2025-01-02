@@ -240,19 +240,23 @@ ISR(TIMER1_COMPA_vect) {
 		if (SyncQueue::widx == SyncQueue::ridx) {
 			// queue is empty
 			Platform::intr_buffer[0] = 0;
+			Platform::intr_buffer[1] = 0;
 			Platform::intr_buffer[2] = 0;
+			Platform::intr_buffer[3] = 0;
 			Platform::intr_buffer[4] = 0;
+			Platform::intr_buffer[5] = 0;
 			Platform::intr_buffer[6] = 0;
-			// increment the motors write index, so it doesn't fall behind
+			Platform::intr_buffer[7] = 0;
+			// increment the queue write index as well, so it doesn't fall behind
 			SyncQueue::ridx += 1;
 			SyncQueue::widx = SyncQueue::ridx;
 		} else {
 			// queue is not empty
-			uint16_t ridx = SyncQueue::ridx*MOTOR_COUNT*2;
+			uint16_t ridx = ((uint16_t) SyncQueue::ridx)*MOTOR_COUNT*2;
 			uint8_t *data = &SyncQueue::data[ridx];
 
 			Platform::intr_buffer[0] = data[0];
-        	Platform::intr_buffer[1] = 255;
+			Platform::intr_buffer[1] = data[0];
 			Platform::isr_dir[0] = data[1];
 			if (data[1] == 1) {
 				MOTOR0_DIR_PORT &= ~MOTOR0_DIR_PIN;
@@ -261,7 +265,7 @@ ISR(TIMER1_COMPA_vect) {
 			}
 
 			Platform::intr_buffer[2] = data[2];
-        	Platform::intr_buffer[3] = 255;
+			Platform::intr_buffer[3] = data[2];
 			Platform::isr_dir[1] = data[3];
 			if (data[3] == 1) {
 				MOTOR1_DIR_PORT &= ~MOTOR1_DIR_PIN;
@@ -270,7 +274,7 @@ ISR(TIMER1_COMPA_vect) {
 			}
 
 			Platform::intr_buffer[4] = data[4];
-        	Platform::intr_buffer[5] = 255;
+			Platform::intr_buffer[5] = data[4];
 			Platform::isr_dir[2] = data[5];
 			if (data[5] == 1) {
 				MOTOR2_DIR_PORT &= ~MOTOR2_DIR_PIN;
@@ -279,7 +283,7 @@ ISR(TIMER1_COMPA_vect) {
 			}
 
 			Platform::intr_buffer[6] = data[6];
-        	Platform::intr_buffer[7] = 255;
+			Platform::intr_buffer[7] = data[6];
 			Platform::isr_dir[3] = data[7];
 			if (data[7] == 1) {
 				MOTOR3_DIR_PORT &= ~MOTOR3_DIR_PIN;
@@ -290,8 +294,7 @@ ISR(TIMER1_COMPA_vect) {
 			SyncQueue::ridx += 1;
 		}
 	} else {
-		// drive motor[0]
-		// ~17 cycles == 1105ns
+		// drive motors
 		uint8_t vel = Platform::intr_buffer[0];
 		uint8_t cnt = Platform::intr_buffer[1];
 		uint8_t next_cnt = cnt + vel;
@@ -301,8 +304,6 @@ ISR(TIMER1_COMPA_vect) {
 		}
 		Platform::intr_buffer[1] = next_cnt;
 
-		// drive motor[1]
-		// ~15 cycles == 975ns
 		vel = Platform::intr_buffer[2];
 		cnt = Platform::intr_buffer[3];
 		next_cnt = cnt + vel;

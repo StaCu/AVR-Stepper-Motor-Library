@@ -26,9 +26,7 @@ void SyncQueue::enq(uint8_t *vel_dir) {
 		return;
 	}
 	auto intr = Platform::InterruptProtectionFrame();
-	uint8_t next_widx = widx + 1;
-	VOLATILE_UINT8(widx) = next_widx;
-	uint8_t *ptr = &data[next_widx*MOTOR_COUNT*2];
+	uint8_t *ptr = &data[((uint16_t) widx)*MOTOR_COUNT*2];
 	VOLATILE_UINT8(ptr[0]) = vel_dir[0];
 	VOLATILE_UINT8(ptr[1]) = vel_dir[1];
 	VOLATILE_UINT8(ptr[2]) = vel_dir[2];
@@ -37,6 +35,7 @@ void SyncQueue::enq(uint8_t *vel_dir) {
 	VOLATILE_UINT8(ptr[5]) = vel_dir[5];
 	VOLATILE_UINT8(ptr[6]) = vel_dir[6];
 	VOLATILE_UINT8(ptr[7]) = vel_dir[7];
+	VOLATILE_UINT8(widx) = widx + 1;
 }
 
 void SyncQueue::isr_next() {

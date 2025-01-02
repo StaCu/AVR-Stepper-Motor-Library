@@ -8,6 +8,15 @@ class Platform {
 
 public:
 
+    static uint8_t intr_buffer[MOTOR_COUNT*2];
+    static uint8_t end_detection[MOTOR_COUNT*2];
+    static uint8_t blocked[MOTOR_COUNT];
+    static uint8_t intr_iteration;
+
+    static volatile int32_t isr_pos[MOTOR_COUNT];
+    static int8_t isr_dir[MOTOR_COUNT];
+    static int8_t isr_steps[MOTOR_COUNT];
+
     static void init();
 
     static void start();

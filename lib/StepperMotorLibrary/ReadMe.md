@@ -1,4 +1,2 @@
 StepperMotorLibrary
 -------------------
-
- - lower acceleration

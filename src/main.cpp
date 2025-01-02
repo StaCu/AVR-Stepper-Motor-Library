@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <StepperMotors.h>
+#include <platform/Platform.h>
 
 void setup() {
     Serial.begin(115200);
@@ -26,7 +27,7 @@ void loop() {
             uint8_t value = read();
             vel[m*2+0] = value;
             vel[m*2+1] = direction;
-            if (direction == 0) {
+            if (direction == 255) {
                 pos[m] -= value;
             } else {
                 pos[m] += value;
@@ -39,6 +40,10 @@ void loop() {
         pos[1] = 0;
         pos[2] = 0;
         pos[3] = 0;
+        Platform::isr_pos[0] = 0;
+        Platform::isr_pos[1] = 0;
+        Platform::isr_pos[2] = 0;
+        Platform::isr_pos[3] = 0;
     } else if (c == 101) {
         StepperMotors::turn_off();
     } else if (c == 102) {
@@ -46,8 +51,6 @@ void loop() {
     } else if (c == 103) {
         uint8_t free = StepperMotors::free();
         Serial.write(free);
-        uint8_t is_blocked = 0;
-        uint8_t is_at_end = 0;
         for (uint8_t m = 0; m < StepperMotors::motor_count(); m++) {
             uint8_t state = (StepperMotors::is_blocked(m) << 1) | StepperMotors::is_at_end(m);
             Serial.write(state);
@@ -61,6 +64,10 @@ void loop() {
     } else if (c == 106) {
         for (uint8_t i = 0; i < 4*4; i++) {
             Serial.write(((uint8_t*) pos)[i]);
+        }
+    } else if (c == 107) {
+        for (uint8_t i = 0; i < 4*4; i++) {
+            Serial.write(((uint8_t*) Platform::isr_pos)[i]);
         }
     }
 }

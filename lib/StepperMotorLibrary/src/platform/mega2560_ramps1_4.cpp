@@ -74,10 +74,14 @@
 #define GET_DDR(PORT) (*((&PORT)-1))
 #define GET_PIN(PORT) (*((&PORT)-2))
 
-uint8_t intr_buffer[MOTOR_COUNT*2];
-uint8_t end_detection[MOTOR_COUNT*2];
-uint8_t blocked[MOTOR_COUNT];
-uint8_t intr_iteration;
+uint8_t Platform::intr_buffer[MOTOR_COUNT*2];
+uint8_t Platform::end_detection[MOTOR_COUNT*2];
+uint8_t Platform::blocked[MOTOR_COUNT];
+uint8_t Platform::intr_iteration;
+
+volatile int32_t Platform::isr_pos[MOTOR_COUNT] = { 0, 0, 0, 0 };
+int8_t Platform::isr_dir[MOTOR_COUNT];
+int8_t Platform::isr_steps[MOTOR_COUNT];
 
 void Platform::init() {
 	Platform::stop();
@@ -187,15 +191,15 @@ bool Platform::is_at_end(uint8_t motor) {
 	if (motor == 0) {
 		return (GET_PIN(MOTOR0_MIN_PORT) & MOTOR0_MIN_PIN) == 0;
 	}
-	return end_detection[motor<<1] != 0;
+	return Platform::end_detection[motor<<1] != 0;
 }
 
 bool Platform::is_blocked(uint8_t motor) {
-	return blocked[motor] != 0;
+	return Platform::blocked[motor] != 0;
 }
 
 void Platform::unblock(uint8_t motor) {
-	blocked[motor] = 0;
+	Platform::blocked[motor] = 0;
 }
 
 void Platform::start() {
@@ -204,7 +208,11 @@ void Platform::start() {
 		return;
 	}
 
-    intr_iteration = 0;
+    Platform::intr_iteration = 0;
+	for (uint8_t m = 0; m < MOTOR_COUNT; m++) {
+		Platform::isr_steps[m] = 0;
+		Platform::isr_pos[m] = 0;
+	}
 	
 	// enable output compare A interrupt
 	TIMSK1 |= (1<<OCIE1A);
@@ -216,11 +224,6 @@ void Platform::stop() {
 	Platform::disableInterrupts();
 	// disable output compare interrupt
 	TIMSK1 &= ~((1<<OCIE1A)|(1<<OCIE1B)|(1<<OCIE1C));
-
-    for (uint8_t i = 0; i < MOTOR_COUNT*2; i += 2) {
-        intr_buffer[i] = 0;
-        intr_buffer[i+1] = 127;
-    }
 }
 
 void Platform::enableInterrupts() {
@@ -232,14 +235,14 @@ void Platform::disableInterrupts() {
 }
 
 ISR(TIMER1_COMPA_vect) {
-	if (intr_iteration == 0) {
-		intr_iteration = 1;
+	if (Platform::intr_iteration == 0) {
+		Platform::intr_iteration = 1;
 		if (SyncQueue::widx == SyncQueue::ridx) {
 			// queue is empty
-			intr_buffer[0] = 0;
-			intr_buffer[2] = 0;
-			intr_buffer[4] = 0;
-			intr_buffer[6] = 0;
+			Platform::intr_buffer[0] = 0;
+			Platform::intr_buffer[2] = 0;
+			Platform::intr_buffer[4] = 0;
+			Platform::intr_buffer[6] = 0;
 			// increment the motors write index, so it doesn't fall behind
 			SyncQueue::ridx += 1;
 			SyncQueue::widx = SyncQueue::ridx;
@@ -248,33 +251,37 @@ ISR(TIMER1_COMPA_vect) {
 			uint16_t ridx = SyncQueue::ridx*MOTOR_COUNT*2;
 			uint8_t *data = &SyncQueue::data[ridx];
 
-			intr_buffer[0] = data[0];
-        	intr_buffer[1] = 255;
-			if (data[1] == 0) {
+			Platform::intr_buffer[0] = data[0];
+        	Platform::intr_buffer[1] = 255;
+			Platform::isr_dir[0] = data[1];
+			if (data[1] == 1) {
 				MOTOR0_DIR_PORT &= ~MOTOR0_DIR_PIN;
 			} else {
 				MOTOR0_DIR_PORT |= MOTOR0_DIR_PIN;
 			}
 
-			intr_buffer[2] = data[2];
-        	intr_buffer[3] = 255;
-			if (data[3] == 0) {
+			Platform::intr_buffer[2] = data[2];
+        	Platform::intr_buffer[3] = 255;
+			Platform::isr_dir[1] = data[3];
+			if (data[3] == 1) {
 				MOTOR1_DIR_PORT &= ~MOTOR1_DIR_PIN;
 			} else {
 				MOTOR1_DIR_PORT |= MOTOR1_DIR_PIN;
 			}
 
-			intr_buffer[4] = data[4];
-        	intr_buffer[5] = 255;
-			if (data[5] == 0) {
+			Platform::intr_buffer[4] = data[4];
+        	Platform::intr_buffer[5] = 255;
+			Platform::isr_dir[2] = data[5];
+			if (data[5] == 1) {
 				MOTOR2_DIR_PORT &= ~MOTOR2_DIR_PIN;
 			} else {
 				MOTOR2_DIR_PORT |= MOTOR2_DIR_PIN;
 			}
 
-			intr_buffer[6] = data[6];
-        	intr_buffer[7] = 255;
-			if (data[7] == 0) {
+			Platform::intr_buffer[6] = data[6];
+        	Platform::intr_buffer[7] = 255;
+			Platform::isr_dir[3] = data[7];
+			if (data[7] == 1) {
 				MOTOR3_DIR_PORT &= ~MOTOR3_DIR_PIN;
 			} else {
 				MOTOR3_DIR_PORT |= MOTOR3_DIR_PIN;
@@ -285,84 +292,57 @@ ISR(TIMER1_COMPA_vect) {
 	} else {
 		// drive motor[0]
 		// ~17 cycles == 1105ns
-		uint8_t vel = intr_buffer[0];
-		uint8_t cnt = intr_buffer[1];
+		uint8_t vel = Platform::intr_buffer[0];
+		uint8_t cnt = Platform::intr_buffer[1];
 		uint8_t next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR0_CLK_PORT |= MOTOR0_CLK_PIN;
+			Platform::isr_steps[0] += Platform::isr_dir[0];
 		}
-		intr_buffer[1] = next_cnt;
+		Platform::intr_buffer[1] = next_cnt;
 
 		// drive motor[1]
 		// ~15 cycles == 975ns
-		vel = intr_buffer[2];
-		cnt = intr_buffer[3];
+		vel = Platform::intr_buffer[2];
+		cnt = Platform::intr_buffer[3];
 		next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR1_CLK_PORT |= MOTOR1_CLK_PIN;
+			Platform::isr_steps[1] += Platform::isr_dir[1];
 		}
-		intr_buffer[3] = next_cnt;
+		Platform::intr_buffer[3] = next_cnt;
 
-		vel = intr_buffer[4];
-		cnt = intr_buffer[5];
+		vel = Platform::intr_buffer[4];
+		cnt = Platform::intr_buffer[5];
 		next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR2_CLK_PORT |= MOTOR2_CLK_PIN;
+			Platform::isr_steps[2] += Platform::isr_dir[2];
 		}
-		intr_buffer[5] = next_cnt;
+		Platform::intr_buffer[5] = next_cnt;
 
-		vel = intr_buffer[6];
-		cnt = intr_buffer[7];
+		vel = Platform::intr_buffer[6];
+		cnt = Platform::intr_buffer[7];
 		next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR3_CLK_PORT |= MOTOR3_CLK_PIN;
+			Platform::isr_steps[3] += Platform::isr_dir[3];
 		}
-		intr_buffer[7] = next_cnt;
-	#if MOTOR_COUNT >= 5
-		vel = intr_buffer[8];
-		cnt = intr_buffer[9];
-		next_cnt = cnt + vel;
-		if (next_cnt < cnt) {
-			MOTOR4_CLK_PORT |= MOTOR4_CLK_PIN;
+		Platform::intr_buffer[7] = next_cnt;
+
+		// update isr position of one motor
+		uint8_t motor = Platform::intr_iteration & 0xf;
+		Platform::intr_iteration += 1;
+		if (motor < MOTOR_COUNT) {
+			Platform::isr_pos[motor] += Platform::isr_steps[motor];
+			Platform::isr_steps[motor] = 0;
 		}
-		intr_buffer[9] = next_cnt;
-	#endif
-
-		intr_iteration += 1;
-
-		asm volatile (
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			"nop\n"
-			: : :
-		);
 
 		// clear the step pin
-		// ~8 cycles == 520ns
 		MOTOR0_CLK_PORT &= ~MOTOR0_CLK_PIN;
 		MOTOR1_CLK_PORT &= ~MOTOR1_CLK_PIN;
 		MOTOR2_CLK_PORT &= ~MOTOR2_CLK_PIN;
 		MOTOR3_CLK_PORT &= ~MOTOR3_CLK_PIN;
-	#if MOTOR_COUNT >= 5
-		MOTOR4_CLK_PORT &= ~MOTOR4_CLK_PIN;
-	#endif
 	}
 
 /*
@@ -419,8 +399,8 @@ ISR(TIMER1_COMPB_vect) {
 	TIMSK1 &= ~(1<<OCIE1B);
 	sei();
 	for (int m = 0; m < MOTOR_COUNT; m++) {
-		if (end_detection[m<<1] != end_detection[(m<<1) + 1]) {
-			end_detection[(m<<1) + 1] = end_detection[m<<1];
+		if (Platform::end_detection[m<<1] != Platform::end_detection[(m<<1) + 1]) {
+			Platform::end_detection[(m<<1) + 1] = Platform::end_detection[m<<1];
 			//blocked[m] = 1;
 			//SyncQueue::reset(m);
 		}

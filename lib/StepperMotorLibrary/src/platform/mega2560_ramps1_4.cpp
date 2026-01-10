@@ -4,18 +4,7 @@
 #include <Arduino.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-/*
-#define MOTOR0_CLK_PORT PORTF
-#define MOTOR0_CLK_PIN  0b00000001
-#define MOTOR0_DIR_PORT PORTF
-#define MOTOR0_DIR_PIN  0b00000010
-#define MOTOR0_EN_PORT  PORTD
-#define MOTOR0_EN_PIN   0b10000000
-#define MOTOR0_MIN_PORT PORTE
-#define MOTOR0_MIN_PIN  0b00100000
-#define MOTOR0_MAX_PORT PORTE
-#define MOTOR0_MAX_PIN  0b00010000
-*/
+
 #define MOTOR0_CLK_PORT PORTC
 #define MOTOR0_CLK_PIN  0b00000010
 #define MOTOR0_DIR_PORT PORTC
@@ -60,11 +49,11 @@
 #define MOTOR3_MAX_PORT PORTD
 #define MOTOR3_MAX_PIN  0b00000100
 
-#define MOTOR4_CLK_PORT PORTC
-#define MOTOR4_CLK_PIN  0b00000010
-#define MOTOR4_DIR_PORT PORTC
-#define MOTOR4_DIR_PIN  0b00001000
-#define MOTOR4_EN_PORT  PORTC
+#define MOTOR4_CLK_PORT PORTF
+#define MOTOR4_CLK_PIN  0b00000001
+#define MOTOR4_DIR_PORT PORTF
+#define MOTOR4_DIR_PIN  0b00000010
+#define MOTOR4_EN_PORT  PORTD
 #define MOTOR4_EN_PIN   0b10000000
 #define MOTOR4_MIN_PORT PORTD
 #define MOTOR4_MIN_PIN  0b00001000
@@ -247,6 +236,8 @@ ISR(TIMER1_COMPA_vect) {
 			Platform::intr_buffer[5] = 0;
 			Platform::intr_buffer[6] = 0;
 			Platform::intr_buffer[7] = 0;
+			Platform::intr_buffer[8] = 0;
+			Platform::intr_buffer[9] = 0;
 			// increment the queue write index as well, so it doesn't fall behind
 			SyncQueue::ridx += 1;
 			SyncQueue::widx = SyncQueue::ridx;
@@ -291,6 +282,15 @@ ISR(TIMER1_COMPA_vect) {
 				MOTOR3_DIR_PORT |= MOTOR3_DIR_PIN;
 			}
 
+			Platform::intr_buffer[8] = data[8];
+			Platform::intr_buffer[9] = data[8];
+			Platform::isr_dir[4] = data[9];
+			if (data[9] == 1) {
+				MOTOR4_DIR_PORT &= ~MOTOR4_DIR_PIN;
+			} else {
+				MOTOR4_DIR_PORT |= MOTOR4_DIR_PIN;
+			}
+
 			SyncQueue::ridx += 1;
 		}
 	} else {
@@ -331,6 +331,15 @@ ISR(TIMER1_COMPA_vect) {
 		}
 		Platform::intr_buffer[7] = next_cnt;
 
+		vel = Platform::intr_buffer[8];
+		cnt = Platform::intr_buffer[9];
+		next_cnt = cnt + vel;
+		if (next_cnt < cnt) {
+			MOTOR4_CLK_PORT |= MOTOR4_CLK_PIN;
+			Platform::isr_steps[4] += Platform::isr_dir[4];
+		}
+		Platform::intr_buffer[9] = next_cnt;
+
 		// update isr position of one motor
 		uint8_t motor = Platform::intr_iteration & 0xf;
 		Platform::intr_iteration += 1;
@@ -344,6 +353,7 @@ ISR(TIMER1_COMPA_vect) {
 		MOTOR1_CLK_PORT &= ~MOTOR1_CLK_PIN;
 		MOTOR2_CLK_PORT &= ~MOTOR2_CLK_PIN;
 		MOTOR3_CLK_PORT &= ~MOTOR3_CLK_PIN;
+		MOTOR4_CLK_PORT &= ~MOTOR4_CLK_PIN;
 	}
 
 /*

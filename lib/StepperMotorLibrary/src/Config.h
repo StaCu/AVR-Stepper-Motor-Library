@@ -1,5 +1,5 @@
 
-#define MOTOR_COUNT 4
+#define MOTOR_COUNT 5
 #define MOTOR_BITS  ((1 << MOTOR_COUNT) - 1)
 #define COMMAND_QUEUE_SIZE 16
 

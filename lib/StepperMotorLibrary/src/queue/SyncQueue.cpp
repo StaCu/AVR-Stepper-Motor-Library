@@ -35,6 +35,8 @@ void SyncQueue::enq(uint8_t *vel_dir) {
 	VOLATILE_UINT8(ptr[5]) = vel_dir[5];
 	VOLATILE_UINT8(ptr[6]) = vel_dir[6];
 	VOLATILE_UINT8(ptr[7]) = vel_dir[7];
+	VOLATILE_UINT8(ptr[8]) = vel_dir[8];
+	VOLATILE_UINT8(ptr[9]) = vel_dir[9];
 	VOLATILE_UINT8(widx) = widx + 1;
 }
 

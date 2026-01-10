@@ -6,7 +6,7 @@
 
 #define VOLATILE_UINT8(x) (*(volatile uint8_t*) &x)
 
-uint8_t Queue::widx[MOTOR_COUNT] = {0,0,0,0};
+uint8_t Queue::widx[MOTOR_COUNT] = {0,0,0,0,0};
 uint8_t Queue::ridx = 0;
 uint8_t Queue::data[256*MOTOR_COUNT*2];
 uint8_t Queue::next_data[MOTOR_COUNT*2];

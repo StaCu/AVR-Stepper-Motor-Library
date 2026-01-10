@@ -16,7 +16,7 @@ uint8_t read() {
     return c;
 }
 
-int32_t pos[] = { 0, 0, 0, 0 };
+int32_t pos[] = { 0, 0, 0, 0, 0 };
 
 void loop() {
     uint8_t c = read();
@@ -36,14 +36,10 @@ void loop() {
         StepperMotors::move(vel);
     } else if (c == 100) {
         StepperMotors::turn_on();
-        pos[0] = 0;
-        pos[1] = 0;
-        pos[2] = 0;
-        pos[3] = 0;
-        Platform::isr_pos[0] = 0;
-        Platform::isr_pos[1] = 0;
-        Platform::isr_pos[2] = 0;
-        Platform::isr_pos[3] = 0;
+        for (uint8_t m = 0; m < StepperMotors::motor_count(); m++) {
+            pos[m] = 0;
+            Platform::isr_pos[m] = 0;
+        }
     } else if (c == 101) {
         StepperMotors::turn_off();
     } else if (c == 102) {
@@ -62,11 +58,11 @@ void loop() {
         uint8_t free = StepperMotors::free();
         Serial.write(free);
     } else if (c == 106) {
-        for (uint8_t i = 0; i < 4*4; i++) {
+        for (uint8_t i = 0; i < 4*StepperMotors::motor_count(); i++) {
             Serial.write(((uint8_t*) pos)[i]);
         }
     } else if (c == 107) {
-        for (uint8_t i = 0; i < 4*4; i++) {
+        for (uint8_t i = 0; i < 4*StepperMotors::motor_count(); i++) {
             Serial.write(((uint8_t*) Platform::isr_pos)[i]);
         }
     }

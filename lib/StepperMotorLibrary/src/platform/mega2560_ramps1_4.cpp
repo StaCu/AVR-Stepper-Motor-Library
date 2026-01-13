@@ -68,7 +68,7 @@ uint8_t Platform::end_detection[MOTOR_COUNT*2];
 uint8_t Platform::blocked[MOTOR_COUNT];
 uint8_t Platform::intr_iteration;
 
-volatile int32_t Platform::isr_pos[MOTOR_COUNT] = { 0, 0, 0, 0 };
+volatile int32_t Platform::isr_pos[MOTOR_COUNT] = { 0, 0, 0, 0, 0 };
 int8_t Platform::isr_dir[MOTOR_COUNT];
 int8_t Platform::isr_steps[MOTOR_COUNT];
 
@@ -108,10 +108,10 @@ void Platform::init() {
 			MOTOR2_DIR_PORT  &= ~MOTOR2_DIR_PIN;
 	GET_DDR(MOTOR2_EN_PORT)  |=  MOTOR2_EN_PIN;
 	        MOTOR2_EN_PORT   |=  MOTOR2_EN_PIN;
-	GET_DDR(MOTOR2_MIN_PORT) &=  MOTOR2_MIN_PIN;
+	/*GET_DDR(MOTOR2_MIN_PORT) &=  MOTOR2_MIN_PIN;
 	        MOTOR2_MIN_PORT  |=  MOTOR2_MIN_PIN;
 	GET_DDR(MOTOR2_MAX_PORT) &=  MOTOR2_MAX_PIN;
-	        MOTOR2_MAX_PORT  |=  MOTOR2_MAX_PIN;
+	        MOTOR2_MAX_PORT  |=  MOTOR2_MAX_PIN;*/
 
 	GET_DDR(MOTOR3_CLK_PORT) |=  MOTOR3_CLK_PIN;
 			MOTOR3_CLK_PORT  &= ~MOTOR3_CLK_PIN;
@@ -119,10 +119,10 @@ void Platform::init() {
 			MOTOR3_DIR_PORT  &= ~MOTOR3_DIR_PIN;
 	GET_DDR(MOTOR3_EN_PORT)  |=  MOTOR3_EN_PIN;
 	        MOTOR3_EN_PORT   |=  MOTOR3_EN_PIN;
-	GET_DDR(MOTOR3_MIN_PORT) &=  MOTOR3_MIN_PIN;
+	/*GET_DDR(MOTOR3_MIN_PORT) &=  MOTOR3_MIN_PIN;
 	        MOTOR3_MIN_PORT  |=  MOTOR3_MIN_PIN;
 	GET_DDR(MOTOR3_MAX_PORT) &=  MOTOR3_MAX_PIN;
-	        MOTOR3_MAX_PORT  |=  MOTOR3_MAX_PIN;
+	        MOTOR3_MAX_PORT  |=  MOTOR3_MAX_PIN;*/
 
 	GET_DDR(MOTOR4_CLK_PORT) |=  MOTOR4_CLK_PIN;
 			MOTOR4_CLK_PORT  &= ~MOTOR4_CLK_PIN;
@@ -130,10 +130,10 @@ void Platform::init() {
 			MOTOR4_DIR_PORT  &= ~MOTOR4_DIR_PIN;
 	GET_DDR(MOTOR4_EN_PORT)  |=  MOTOR4_EN_PIN;
 	        MOTOR4_EN_PORT   |=  MOTOR4_EN_PIN;
-	GET_DDR(MOTOR4_MIN_PORT) &=  MOTOR4_MIN_PIN;
+	/*GET_DDR(MOTOR4_MIN_PORT) &=  MOTOR4_MIN_PIN;
 	        MOTOR4_MIN_PORT  |=  MOTOR4_MIN_PIN;
 	GET_DDR(MOTOR4_MAX_PORT) &=  MOTOR4_MAX_PIN;
-	        MOTOR4_MAX_PORT  |=  MOTOR4_MAX_PIN;
+	        MOTOR4_MAX_PORT  |=  MOTOR4_MAX_PIN;*/
 
 	// set up timer 1
 	TCCR1A = 0;

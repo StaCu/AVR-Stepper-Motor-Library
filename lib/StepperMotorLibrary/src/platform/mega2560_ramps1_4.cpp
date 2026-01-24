@@ -300,7 +300,7 @@ ISR(TIMER1_COMPA_vect) {
 		uint8_t next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR0_CLK_PORT |= MOTOR0_CLK_PIN;
-			Platform::isr_steps[0] += Platform::isr_dir[0];
+			//Platform::isr_steps[0] += Platform::isr_dir[0];
 		}
 		Platform::intr_buffer[1] = next_cnt;
 
@@ -309,7 +309,7 @@ ISR(TIMER1_COMPA_vect) {
 		next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR1_CLK_PORT |= MOTOR1_CLK_PIN;
-			Platform::isr_steps[1] += Platform::isr_dir[1];
+			//Platform::isr_steps[1] += Platform::isr_dir[1];
 		}
 		Platform::intr_buffer[3] = next_cnt;
 
@@ -318,7 +318,7 @@ ISR(TIMER1_COMPA_vect) {
 		next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR2_CLK_PORT |= MOTOR2_CLK_PIN;
-			Platform::isr_steps[2] += Platform::isr_dir[2];
+			//Platform::isr_steps[2] += Platform::isr_dir[2];
 		}
 		Platform::intr_buffer[5] = next_cnt;
 
@@ -327,7 +327,7 @@ ISR(TIMER1_COMPA_vect) {
 		next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR3_CLK_PORT |= MOTOR3_CLK_PIN;
-			Platform::isr_steps[3] += Platform::isr_dir[3];
+			//Platform::isr_steps[3] += Platform::isr_dir[3];
 		}
 		Platform::intr_buffer[7] = next_cnt;
 
@@ -336,17 +336,17 @@ ISR(TIMER1_COMPA_vect) {
 		next_cnt = cnt + vel;
 		if (next_cnt < cnt) {
 			MOTOR4_CLK_PORT |= MOTOR4_CLK_PIN;
-			Platform::isr_steps[4] += Platform::isr_dir[4];
+			//Platform::isr_steps[4] += Platform::isr_dir[4];
 		}
 		Platform::intr_buffer[9] = next_cnt;
 
 		// update isr position of one motor
-		uint8_t motor = Platform::intr_iteration & 0xf;
+		//uint8_t motor = Platform::intr_iteration & 0xf;
 		Platform::intr_iteration += 1;
-		if (motor < MOTOR_COUNT) {
+		/*if (motor < MOTOR_COUNT) {
 			Platform::isr_pos[motor] += Platform::isr_steps[motor];
 			Platform::isr_steps[motor] = 0;
-		}
+		}*/
 
 		// clear the step pin
 		MOTOR0_CLK_PORT &= ~MOTOR0_CLK_PIN;

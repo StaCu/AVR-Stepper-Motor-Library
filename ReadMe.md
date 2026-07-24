@@ -33,7 +33,7 @@ uint8_t steps_dir[10] = {
       0, 0,
       0, 0
 };
-// enqueu next 4ms interval
+// enqueue next 4ms interval
 StepperMotors::move(steps_dir);
 ```
 
